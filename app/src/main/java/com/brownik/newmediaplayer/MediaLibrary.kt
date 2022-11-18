@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
+import android.util.Log
+import com.brownik.newmediaplayer.data.MediaInfoData
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -33,17 +35,16 @@ object MediaLibrary {
                     val duration = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION))
                     val imagePath = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.AudioColumns.ALBUM_ID))
                     val mediaPath = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
-                    mediaList.add(MediaInfoData(id, title, artist, duration, imagePath, mediaPath))
+                    mediaList.add(MediaInfoData(id, title, artist, duration, getImageUri(imagePath), mediaPath))
                 } while (cursor.moveToNext())
             }
             cursor.close()
         }
     }
 
-    private fun getImageUri(path: Long?): String{
+    private fun getImageUri(path: Long?): Uri? {
         val artworkUri = Uri.parse("content://media/external/audio/albumart")
-        val albumUri = Uri.withAppendedPath(artworkUri, path.toString())
-        return albumUri.toString()
+        return Uri.withAppendedPath(artworkUri, path.toString())
     }
 
     fun makeMediaMetadataList(){
@@ -55,8 +56,9 @@ object MediaLibrary {
                 .putLong(MediaMetadataCompat.METADATA_KEY_DURATION,
                     TimeUnit.MILLISECONDS.convert(data.duration, TimeUnit.MICROSECONDS)
                 )
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getImageUri(data.imagePath))
-                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, getImageUri(data.imagePath))
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, data.imagePath.toString())
+                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, data.imagePath.toString())
+                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, data.mediaPath)
                 .build()
         }
     }
@@ -73,9 +75,7 @@ object MediaLibrary {
         return result
     }
 
-    fun getMetadata(mediaId: String): MediaMetadataCompat{
-        val builder = MediaMetadataCompat.Builder()
-
-        return builder.build()
+    fun getMetadata(mediaId: String): MediaMetadataCompat?{
+        return media[mediaId]
     }
 }

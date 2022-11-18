@@ -1,4 +1,4 @@
-package com.brownik.newmediaplayer
+package com.brownik.newmediaplayer.userinterface
 
 import android.content.ComponentName
 import android.content.Context
@@ -7,17 +7,38 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Observer
+import com.brownik.newmediaplayer.R
+import com.brownik.newmediaplayer.data.MediaInfoData
+import com.brownik.newmediaplayer.data.MediaInfoViewModel
+import com.brownik.newmediaplayer.service.MediaPlayerService
+import com.brownik.newmediaplayer.userinterface.adapter.MediaInfoListAdapter
 import com.brownik.newmediaplayer.databinding.ActivityMediaPlayerBinding
 
 class MediaPlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMediaPlayerBinding
-    private lateinit var mediaBrowserCompat: MediaBrowserCompat
+    private var restart = false
+    private val mediaBrowserCompat: MediaBrowserCompat by lazy {
+        MediaBrowserCompat(
+            this,
+            ComponentName(this, MediaPlayerService::class.java),
+            connectionCallback,
+            null
+        )
+    }
+    private lateinit var mediaInfoViewModel: MediaInfoViewModel
     private val mediaController by lazy {
         MediaControllerCompat.getMediaController(this@MediaPlayerActivity)
+    }
+    private val mediaInfoListAdapter: MediaInfoListAdapter by lazy {
+        MediaInfoListAdapter { data ->
+            onMediaClickListener(data)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,12 +47,9 @@ class MediaPlayerActivity : AppCompatActivity() {
         setContentView(binding.root)
         permissionCheck()
 
-        mediaBrowserCompat = MediaBrowserCompat(
-            this,
-            ComponentName(this, MediaPlayerService::class.java),
-            connectionCallback,
-            null
-        )
+        binding.rvMediaInfo.adapter = mediaInfoListAdapter  // recyclerview adapter 생성
+        mediaInfoViewModel = MediaInfoViewModel(this)  // ViewModel 생성
+        setMediaInfoLiveData()
     }
 
     override fun onStart() {
@@ -50,6 +68,25 @@ class MediaPlayerActivity : AppCompatActivity() {
         mediaBrowserCompat.disconnect()
     }
 
+    // LiveData 연결
+    private fun setMediaInfoLiveData() {
+        mediaInfoViewModel.mediaInfoList.observe(this@MediaPlayerActivity, Observer {
+            mediaInfoListAdapter.submitList(it.toMutableList())  // LiveData list 변경에 따른 view 업데이트
+        })
+
+        mediaInfoViewModel.selectedMediaInfo.observe(this@MediaPlayerActivity, Observer {
+            binding.ivPlayingImage.setImageURI(it.imagePath)
+            binding.tvPlayingTitle.text = it.title
+            binding.tvPlayingArtist.text = it.artist
+        })
+    }
+
+    // recyclerview media 선택 항목 controller 전달
+    private fun onMediaClickListener(data: MediaInfoData) {
+        mediaController.transportControls.skipToQueueItem(data.id.toLong())
+    }
+
+    // MediaBrowserCompat 연결 확인 callback 및 controller 연결
     private val connectionCallback = object : MediaBrowserCompat.ConnectionCallback() {
         override fun onConnected() {
             MyObject.makeLog("connectionCallback.onConnected")
@@ -75,9 +112,11 @@ class MediaPlayerActivity : AppCompatActivity() {
         }
     }
 
+    // 재생, 일시정지, 이전, 다음 버튼 클릭 시 변경
     fun buildTransPortControls() = with(binding) {
         btnState.setOnClickListener {
             val currentState = mediaController.playbackState.state
+            MyObject.makeLog("currentState: $currentState")
             if (currentState == PlaybackStateCompat.STATE_PLAYING) {
                 mediaController.transportControls.pause()
             } else {
@@ -94,26 +133,41 @@ class MediaPlayerActivity : AppCompatActivity() {
         mediaController.registerCallback(controllerCallback)
     }
 
+    // user control callback
     private var controllerCallback = object : MediaControllerCompat.Callback() {
+
+        // FloatingBar, 현재 재생 목록 표시 변경
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             MyObject.makeLog("controllerCallback.onMetadataChanged")
-            // data 변경
+            mediaInfoViewModel.selectedMedia(metadata)
         }
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             MyObject.makeLog("controllerCallback.onPlaybackStateChanged")
-            // view 변경
+            val btnImage = when (state?.state) {
+                PlaybackStateCompat.STATE_PLAYING -> R.drawable.btn_pause
+                else -> R.drawable.btn_play
+            }
+            binding.btnState.setBackgroundResource(btnImage)
+        }
+
+        // RecyclerView 목록 변경
+        override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>?) {
+            MyObject.makeLog("controllerCallback.onQueueChanged")
+            mediaInfoViewModel.setData(queue)
+            if (queue != null) binding.tvMediaCount.text = queue.size.toString()
+            else binding.tvMediaCount.text = "0"
         }
     }
 
-    private val subscription = object : MediaBrowserCompat.SubscriptionCallback(){
+    // Media 목록 추가
+    private val subscription = object : MediaBrowserCompat.SubscriptionCallback() {
         override fun onChildrenLoaded(
             parentId: String,
             children: MutableList<MediaBrowserCompat.MediaItem>,
         ) {
             MyObject.makeLog("subscription.onChildrenLoaded")
-
-            children.forEach{
+            children.forEach {
                 mediaController.addQueueItem(it.description)
             }
             mediaController.transportControls.prepare()

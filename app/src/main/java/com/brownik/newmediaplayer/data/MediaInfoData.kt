@@ -1,5 +1,6 @@
-package com.brownik.newmediaplayer
+package com.brownik.newmediaplayer.data
 
+import android.net.Uri
 import java.io.Serializable
 
 data class MediaInfoData(
@@ -7,7 +8,7 @@ data class MediaInfoData(
     val title: String = "",
     val artist: String = "",
     val duration: Long = 0,
-    val imagePath: Long? = null,
-    val mediaPath: String = "",
+    val imagePath: Uri? = null,
+    val mediaPath: String,
     var isSelected: Boolean = false,
 ): Serializable

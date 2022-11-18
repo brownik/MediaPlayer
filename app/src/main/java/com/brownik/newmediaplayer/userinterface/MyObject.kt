@@ -1,4 +1,4 @@
-package com.brownik.newmediaplayer
+package com.brownik.newmediaplayer.userinterface
 
 import android.content.Context
 import android.util.Log

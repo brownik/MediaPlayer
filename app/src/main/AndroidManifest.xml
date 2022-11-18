@@ -23,7 +23,7 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="32">
         <service
-            android:name=".MediaPlayerService"
+            android:name=".service.MediaPlayerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -31,7 +31,7 @@
             </intent-filter>
         </service>
         <activity
-            android:name=".MediaPlayerActivity"
+            android:name=".userinterface.MediaPlayerActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
