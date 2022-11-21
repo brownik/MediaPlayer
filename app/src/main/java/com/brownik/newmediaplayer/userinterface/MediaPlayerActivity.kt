@@ -22,7 +22,6 @@ import com.brownik.newmediaplayer.databinding.ActivityMediaPlayerBinding
 class MediaPlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMediaPlayerBinding
-    private var restart = false
     private val mediaBrowserCompat: MediaBrowserCompat by lazy {
         MediaBrowserCompat(
             this,
@@ -57,7 +56,7 @@ class MediaPlayerActivity : AppCompatActivity() {
         mediaBrowserCompat.connect()
     }
 
-    override fun onResume() {
+    public override fun onResume() {
         super.onResume()
         volumeControlStream = AudioManager.STREAM_MUSIC
     }
@@ -129,7 +128,6 @@ class MediaPlayerActivity : AppCompatActivity() {
         btnPrev.setOnClickListener {
             mediaController.transportControls.skipToPrevious()
         }
-        val metadata = mediaController.metadata
         mediaController.registerCallback(controllerCallback)
     }
 

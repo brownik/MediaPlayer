@@ -1,96 +1,117 @@
 package com.brownik.newmediaplayer.service
 
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
 import com.brownik.newmediaplayer.R
 import com.brownik.newmediaplayer.userinterface.MediaPlayerActivity
+import com.brownik.newmediaplayer.userinterface.MyObject
+import androidx.media.app.NotificationCompat.MediaStyle
 
 class MediaNotificationManager(service: MediaPlayerService) {
 
-    val mediaNotificationManager: NotificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val mediaNotificationManager: NotificationManager =
+        service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val notificationId = 512
+    private val channelId = "${R.string.app_name}"
     private val _service = service
+
     // 미디어 버튼 action
-    private val mPlayAction: NotificationCompat.Action =
+    private val playAction: NotificationCompat.Action =
         NotificationCompat.Action(
-            R.drawable.btn_play,
+            R.drawable.ic_play,
             service.getString(R.string.label_play),
             MediaButtonReceiver.buildMediaButtonPendingIntent(
-                service,
+                _service,
                 PlaybackStateCompat.ACTION_PLAY
             )
         )
-    private val mPauseAction: NotificationCompat.Action =
+    private val pauseAction: NotificationCompat.Action =
         NotificationCompat.Action(
-            R.drawable.btn_pause,
+            R.drawable.ic_pause,
             service.getString(R.string.label_pause),
             MediaButtonReceiver.buildMediaButtonPendingIntent(
-                service,
+                _service,
                 PlaybackStateCompat.ACTION_PAUSE
             )
         )
-    private val mNextAction: NotificationCompat.Action =
+    private val nextAction: NotificationCompat.Action =
         NotificationCompat.Action(
-            R.drawable.btn_next,
+            R.drawable.ic_next,
             service.getString(R.string.label_next),
             MediaButtonReceiver.buildMediaButtonPendingIntent(
-                service,
+                _service,
                 PlaybackStateCompat.ACTION_SKIP_TO_NEXT
             )
         )
-    private val mPrevAction: NotificationCompat.Action =
+    private val prevAction: NotificationCompat.Action =
         NotificationCompat.Action(
-            R.drawable.btn_previous,
+            R.drawable.ic_previous,
             service.getString(R.string.label_previous),
             MediaButtonReceiver.buildMediaButtonPendingIntent(
-                service,
+                _service,
                 PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             )
         )
-    private val mStopAction: NotificationCompat.Action =
+    private val stopAction: NotificationCompat.Action =
         NotificationCompat.Action(
             R.drawable.btn_close,
             service.getString(R.string.label_stop),
             MediaButtonReceiver.buildMediaButtonPendingIntent(
-                service,
+                _service,
                 PlaybackStateCompat.ACTION_STOP
             )
         )
 
-    fun getNotificationManager(): NotificationManager {
-        return mediaNotificationManager
+    init {
+        mediaNotificationManager.cancel(notificationId)
     }
+
+    fun getNotificationId() = notificationId
 
     fun getNotification(
         metadata: MediaMetadataCompat?,
         state: PlaybackStateCompat,
-        token: MediaSessionCompat.Token
-    ) : Notification {
+        token: MediaSessionCompat.Token,
+    ): NotificationCompat.Builder {
         val isPlaying = state.state == PlaybackStateCompat.STATE_PLAYING
-        val builder = getMediaNotificationBuilder(metadata!!.description, token)
-        if ((state.actions and PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS) != 0L) builder.addAction(mPrevAction)
-        builder.addAction(if (isPlaying) mPauseAction else mPlayAction)
-        if ((state.actions and PlaybackStateCompat.ACTION_SKIP_TO_NEXT) != 0L) builder.addAction(mNextAction)
-        if ((state.actions and PlaybackStateCompat.ACTION_STOP) != 0L)  builder.addAction(mStopAction)
+        val builder = getNotificationBuilder(metadata!!.description, token)
+        builder.addAction(prevAction)
+        builder.addAction(if (isPlaying) pauseAction else playAction)
+        builder.addAction(nextAction)
 
-        return builder.build()
+        return builder
     }
 
-    private fun getMediaNotificationBuilder(description: MediaDescriptionCompat, token: MediaSessionCompat.Token): NotificationCompat.Builder =
-        NotificationCompat.Builder(_service, "123")
+    private fun getNotificationBuilder(
+        description: MediaDescriptionCompat,
+        token: MediaSessionCompat.Token,
+    ): NotificationCompat.Builder =
+        NotificationCompat.Builder(_service, channelId)
             .setSmallIcon(R.drawable.basic_img)
-            .setColor(ContextCompat.getColor(_service, R.color.white))
-            .setStyle(androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(token).setShowActionsInCompactView(0, 1, 2, 3))
+            .setColor(ContextCompat.getColor(_service, R.color.black))
+            .setStyle(
+                MediaStyle()
+                    .setMediaSession(token)
+                    .setShowActionsInCompactView(0, 1, 2)
+                    .setShowCancelButton(true)
+                    .setCancelButtonIntent(
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                            _service,
+                            PlaybackStateCompat.ACTION_STOP
+                        )
+                    )
+            )
             .setContentIntent(createPendingIntent())
             .setContentTitle(description.title)
             .setContentText(description.subtitle)
@@ -104,8 +125,27 @@ class MediaNotificationManager(service: MediaPlayerService) {
         openUI.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         return PendingIntent.getActivity(
             _service,
-            501,
+            0,
             openUI,
-            PendingIntent.FLAG_CANCEL_CURRENT)
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
+    // NotificationChannel 생성
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun createChannel() {
+        if (mediaNotificationManager.getNotificationChannel(channelId) == null) {
+            MyObject.makeLog("MediaNotificationManager.createChannel.NewChannel")
+            val name: CharSequence = "MediaSession"
+            val description = "MediaPlayer"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(channelId, name, importance)
+            channel.description = description
+            channel.enableLights(true)
+            mediaNotificationManager.createNotificationChannel(channel)
+            channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        } else {
+            MyObject.makeLog("MediaNotificationManager.createChannel.ReuseChannel")
+        }
     }
 }

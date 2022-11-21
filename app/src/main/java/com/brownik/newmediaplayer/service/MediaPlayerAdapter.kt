@@ -8,6 +8,7 @@ import com.brownik.newmediaplayer.userinterface.MyObject
 class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener) {
     private lateinit var mediaPlayer: MediaPlayer
     private var mediaState: Int = 0
+    private var isPlaying = false
 
     fun initMediaPlayerAdapter() {
         mediaPlayer = MediaPlayer()
@@ -15,8 +16,7 @@ class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener)
 
     fun onPlay(metadata: MediaMetadataCompat) {
         MyObject.makeLog("MediaPlayerAdapter.onPlay")
-        MyObject.makeLog("mediaState: $mediaState")
-        if (mediaPlayer.isPlaying || mediaState == 0) {
+        if (mediaPlayer.isPlaying || !isPlaying) {
             mediaPlayer.apply {
                 stop()
                 reset()
@@ -26,14 +26,16 @@ class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener)
             }
         } else {
             mediaPlayer.start()
-            setNewState(PlaybackStateCompat.STATE_PLAYING)
+            isPlaying = false
         }
+        setNewState(PlaybackStateCompat.STATE_PLAYING)
     }
 
     fun onPause() {
         MyObject.makeLog("MediaPlayerAdapter.onPause")
         mediaPlayer.pause()
         setNewState(PlaybackStateCompat.STATE_PAUSED)
+        isPlaying = true
     }
 
     fun release() {
@@ -51,17 +53,35 @@ class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener)
 
     @PlaybackStateCompat.Actions
     private fun getAvailableActions(): Long {
-        val actions: Long = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
-                PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+        val actions: Long =
+            PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
+                    PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or
+                    PlaybackStateCompat.ACTION_PLAY or
+                    PlaybackStateCompat.ACTION_PAUSE or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
 
-        return when (mediaState) {
-            PlaybackStateCompat.STATE_STOPPED -> actions or PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE
-            PlaybackStateCompat.STATE_PLAYING -> actions or PlaybackStateCompat.ACTION_STOP or PlaybackStateCompat.ACTION_PAUSE or
-                    PlaybackStateCompat.ACTION_SEEK_TO
-            PlaybackStateCompat.STATE_PAUSED -> actions or PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_STOP
-            else -> actions or PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                    PlaybackStateCompat.ACTION_STOP or PlaybackStateCompat.ACTION_PAUSE
-        }
+        /*when (mediaState) {
+            PlaybackStateCompat.STATE_STOPPED ->
+                actions or
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE
+            PlaybackStateCompat.STATE_PLAYING ->
+                actions or
+                        PlaybackStateCompat.ACTION_STOP or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SEEK_TO
+            PlaybackStateCompat.STATE_PAUSED ->
+                actions or
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_STOP
+            else ->
+                actions or
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                        PlaybackStateCompat.ACTION_STOP or
+                        PlaybackStateCompat.ACTION_PAUSE
+        }*/
+        return actions
     }
 }

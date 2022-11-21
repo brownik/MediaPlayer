@@ -1,20 +1,18 @@
 package com.brownik.newmediaplayer.service
 
 import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import androidx.core.app.NotificationCompat
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.media.MediaBrowserServiceCompat
 import com.brownik.newmediaplayer.MediaLibrary
-import com.brownik.newmediaplayer.R
-import com.brownik.newmediaplayer.userinterface.MediaPlayerActivity
 import com.brownik.newmediaplayer.userinterface.MyObject
 
 private const val MY_MEDIA_ROOT_ID = "media_root_id"
@@ -24,9 +22,12 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
     private lateinit var mediaSessionCompat: MediaSessionCompat
     private lateinit var stateBuilder: PlaybackStateCompat.Builder
     private lateinit var mediaPlayerAdapter: MediaPlayerAdapter
-    private lateinit var mediaNotificationManager: MediaNotificationManager
+    private val mediaNotificationManager: MediaNotificationManager by lazy {
+        MediaNotificationManager(this@MediaPlayerService)
+    }
     private var isRunning = false
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("NotificationId0")
     override fun onCreate() {
         MyObject.makeLog("MediaPlayerService.onCreate")
@@ -47,19 +48,21 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
         }
         mediaPlayerAdapter = MediaPlayerAdapter(MediaPlayerListener())
         mediaPlayerAdapter.initMediaPlayerAdapter()
-        mediaNotificationManager = MediaNotificationManager(this@MediaPlayerService)
+        mediaNotificationManager.createChannel()
         MediaLibrary.makeMediaList(this)
         MediaLibrary.makeMediaMetadataList()
     }
 
+    // 블랙/화이트 유저 구분 등과 같은 역할
     override fun onGetRoot(
         clientPackageName: String,
         clientUid: Int,
         rootHints: Bundle?,
-    ): BrowserRoot? {
+    ): BrowserRoot {
         return BrowserRoot(MY_MEDIA_ROOT_ID, null)
     }
 
+    // MediaData 넘겨주기
     override fun onLoadChildren(
         parentId: String,
         result: Result<MutableList<MediaBrowserCompat.MediaItem>>,
@@ -67,6 +70,7 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
         result.sendResult(MediaLibrary.getMediaList())
     }
 
+    // Callback
     private val callback = object : MediaSessionCompat.Callback() {
 
         private var playlist: ArrayList<MediaSessionCompat.QueueItem> = ArrayList()
@@ -141,44 +145,49 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
 
         override fun onPlaybackCompleted() {}
         override fun onPlaybackStateChange(state: PlaybackStateCompat) {
+            MyObject.makeLog("MediaPlayerListener.onPlaybackStateChange.${state.state}")
             mediaSessionCompat.setPlaybackState(state)
 
             when (state.state) {
                 PlaybackStateCompat.STATE_PLAYING -> serviceManager.serviceStart(state)
-                PlaybackStateCompat.STATE_STOPPED -> serviceManager.serviceStart(state)
-                else -> serviceManager.serviceStart(state)
+                PlaybackStateCompat.STATE_STOPPED -> serviceManager.serviceStop()
+                else -> serviceManager.updateNotification(state)
             }
         }
 
-
         inner class ServiceManager {
             fun serviceStart(state: PlaybackStateCompat) {
-                val notification = mediaNotificationManager.getNotification(
-                    callback.preparedMedia,
-                    state,
-                    mediaSessionCompat.sessionToken
+                MyObject.makeLog("MediaPlayerListener.ServiceManager.serviceStart")
+                isRunning = true
+                ContextCompat.startForegroundService(
+                    this@MediaPlayerService,
+                    Intent(this@MediaPlayerService,
+                        MediaPlayerService::class.java
+                    )
                 )
-                notification
-                startForeground(412, notification)
-            }
-
-            fun updateNotification(state: PlaybackStateCompat) {
                 showNotification(state)
             }
 
-            fun stopService() {
+            fun updateNotification(state: PlaybackStateCompat) {
+                MyObject.makeLog("MediaPlayerListener.ServiceManager.updateNotification")
+                showNotification(state)
+            }
 
+            fun serviceStop() {
+                MyObject.makeLog("MediaPlayerListener.ServiceManager.serviceStop")
                 isRunning = false
                 stopForeground(false)
                 stopSelf()
-
-                mediaNotificationManager.mediaNotificationManager.cancel(501)
             }
 
             private fun showNotification(state: PlaybackStateCompat) {
+                MyObject.makeLog("MediaPlayerListener.ServiceManager.showNotification")
                 callback.preparedMedia?.let { metadata ->
-//                    val builder = mediaNotificationManager.getNotificationBuilder(metadata, state, sessionToken!!)
-//                    builder.build()
+                    val notificationId = mediaNotificationManager.getNotificationId()
+                    val notification = mediaNotificationManager
+                        .getNotification(metadata, state, sessionToken!!)
+                        .build()
+                    startForeground(notificationId, notification)
                 }
             }
         }
