@@ -2,7 +2,6 @@ package com.brownik.newmediaplayer.userinterface
 
 import android.content.ComponentName
 import android.content.Context
-import android.media.AudioManager
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -39,6 +38,7 @@ class MediaPlayerActivity : AppCompatActivity() {
             onMediaClickListener(data)
         }
     }
+    private var firstSet = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         binding = ActivityMediaPlayerBinding.inflate(layoutInflater)
@@ -47,18 +47,13 @@ class MediaPlayerActivity : AppCompatActivity() {
         permissionCheck()
 
         binding.rvMediaInfo.adapter = mediaInfoListAdapter  // recyclerview adapter 생성
-        mediaInfoViewModel = MediaInfoViewModel(this)  // ViewModel 생성
+        mediaInfoViewModel = MediaInfoViewModel()  // ViewModel 생성
         setMediaInfoLiveData()
     }
 
     override fun onStart() {
         super.onStart()
         mediaBrowserCompat.connect()
-    }
-
-    public override fun onResume() {
-        super.onResume()
-        volumeControlStream = AudioManager.STREAM_MUSIC
     }
 
     override fun onStop() {
@@ -152,13 +147,13 @@ class MediaPlayerActivity : AppCompatActivity() {
         // RecyclerView 목록 변경
         override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>?) {
             MyObject.makeLog("controllerCallback.onQueueChanged")
-            mediaInfoViewModel.setData(queue)
             if (queue != null) binding.tvMediaCount.text = queue.size.toString()
             else binding.tvMediaCount.text = "0"
+            if (firstSet) mediaInfoViewModel.changeData(queue)
         }
     }
 
-    // Media 목록 추가
+    // 최초 Media 목록 추가
     private val subscription = object : MediaBrowserCompat.SubscriptionCallback() {
         override fun onChildrenLoaded(
             parentId: String,
@@ -169,6 +164,8 @@ class MediaPlayerActivity : AppCompatActivity() {
                 mediaController.addQueueItem(it.description)
             }
             mediaController.transportControls.prepare()
+            mediaInfoViewModel.setData(children)
+            firstSet = true
         }
     }
 

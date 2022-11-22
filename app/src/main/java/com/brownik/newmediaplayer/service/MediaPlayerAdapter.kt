@@ -7,7 +7,6 @@ import com.brownik.newmediaplayer.userinterface.MyObject
 
 class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener) {
     private lateinit var mediaPlayer: MediaPlayer
-    private var mediaState: Int = 0
     private var isPlaying = false
 
     fun initMediaPlayerAdapter() {

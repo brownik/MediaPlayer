@@ -6,11 +6,9 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
-import android.util.Log
 import com.brownik.newmediaplayer.data.MediaInfoData
 import java.util.*
 import java.util.concurrent.TimeUnit
-
 
 object MediaLibrary {
 
