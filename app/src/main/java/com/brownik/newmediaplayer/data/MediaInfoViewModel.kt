@@ -8,6 +8,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.brownik.newmediaplayer.userinterface.MyObject
+import kotlinx.coroutines.DisposableHandle
 
 class MediaInfoViewModel: ViewModel() {
 
@@ -59,10 +60,14 @@ class MediaInfoViewModel: ViewModel() {
             val artist: String = MyObject.reduceTextSize20(metadata.description.subtitle.toString())
             val duration: Long = 0
             val imagePath: Uri? = metadata.description.iconUri
-            val mediaPath: String = ""
+            val mediaPath: String = metadata.description.mediaId.toString()
             val selectedData = MediaInfoData(id, title, artist, duration, imagePath, mediaPath, true)
             _mediaInfoList.value = list?.toMutableList()
             _selectedMediaInfo.value = selectedData
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
     }
 }

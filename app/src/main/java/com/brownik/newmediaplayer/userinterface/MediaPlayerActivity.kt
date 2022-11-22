@@ -11,9 +11,11 @@ import android.support.v4.media.session.PlaybackStateCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.brownik.newmediaplayer.R
 import com.brownik.newmediaplayer.data.MediaInfoData
 import com.brownik.newmediaplayer.data.MediaInfoViewModel
+import com.brownik.newmediaplayer.data.MediaInfoViewModelFactory
 import com.brownik.newmediaplayer.service.MediaPlayerService
 import com.brownik.newmediaplayer.userinterface.adapter.MediaInfoListAdapter
 import com.brownik.newmediaplayer.databinding.ActivityMediaPlayerBinding
@@ -47,7 +49,10 @@ class MediaPlayerActivity : AppCompatActivity() {
         permissionCheck()
 
         binding.rvMediaInfo.adapter = mediaInfoListAdapter  // recyclerview adapter 생성
-        mediaInfoViewModel = MediaInfoViewModel()  // ViewModel 생성
+        mediaInfoViewModel = ViewModelProvider(
+            this,
+            MediaInfoViewModelFactory()
+        )[MediaInfoViewModel::class.java]// ViewModel 생성
         setMediaInfoLiveData()
     }
 
@@ -58,8 +63,14 @@ class MediaPlayerActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        firstSet = false
         MediaControllerCompat.getMediaController(this)?.unregisterCallback(controllerCallback)
         mediaBrowserCompat.disconnect()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaController.transportControls.stop()
     }
 
     // LiveData 연결

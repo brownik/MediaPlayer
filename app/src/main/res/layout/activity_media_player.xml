@@ -4,10 +4,6 @@
 
     <data>
 
-        <!--<variable
-            name="mediaInfoData"
-            type="com.brownik.newmediaplayer.data.MediaInfoData" />
--->
         <variable
             name="mediaInfoViewModel"
             type="com.brownik.newmediaplayer.data.MediaInfoViewModel" />

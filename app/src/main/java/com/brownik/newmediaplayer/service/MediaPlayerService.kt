@@ -131,6 +131,11 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
             onPlay()
         }
 
+        override fun onStop() {
+            MyObject.makeLog("callback.onStop")
+            mediaPlayerAdapter.onStop()
+        }
+
         override fun onSkipToQueueItem(id: Long) {
             queueIndex =
                 playlist.indices.find { playlist[it].description.mediaId == id.toString() }!!
@@ -176,7 +181,7 @@ class MediaPlayerService : MediaBrowserServiceCompat() {
             fun serviceStop() {
                 MyObject.makeLog("MediaPlayerListener.ServiceManager.serviceStop")
                 isRunning = false
-                stopForeground(false)
+                stopForeground(true)
                 stopSelf()
             }
 

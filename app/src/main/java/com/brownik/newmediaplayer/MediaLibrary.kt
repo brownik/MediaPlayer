@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 object MediaLibrary {
 
     var mediaList = arrayListOf<MediaInfoData>()
-    var media = TreeMap<String, MediaMetadataCompat>()
+    private var media = TreeMap<String, MediaMetadataCompat>()
     private val albumRes = HashMap<String, Int>()
     private val mediaFileName = HashMap<String, String>()
 

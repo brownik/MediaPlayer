@@ -37,9 +37,10 @@ class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener)
         isPlaying = true
     }
 
-    fun release() {
-        MyObject.makeLog("MediaPlayerAdapter.release")
+    fun onStop(){
+        MyObject.makeLog("MediaPlayerAdapter.onStop")
         mediaPlayer.release()
+        setNewState(PlaybackStateCompat.STATE_STOPPED)
     }
 
     private fun setNewState(newPlayerState: Int) {
@@ -52,35 +53,12 @@ class MediaPlayerAdapter(private val playbackInfoListener: PlaybackInfoListener)
 
     @PlaybackStateCompat.Actions
     private fun getAvailableActions(): Long {
-        val actions: Long =
-            PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
-                    PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or
-                    PlaybackStateCompat.ACTION_PLAY or
-                    PlaybackStateCompat.ACTION_PAUSE or
-                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
 
-        /*when (mediaState) {
-            PlaybackStateCompat.STATE_STOPPED ->
-                actions or
-                        PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE
-            PlaybackStateCompat.STATE_PLAYING ->
-                actions or
-                        PlaybackStateCompat.ACTION_STOP or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_SEEK_TO
-            PlaybackStateCompat.STATE_PAUSED ->
-                actions or
-                        PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_STOP
-            else ->
-                actions or
-                        PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                        PlaybackStateCompat.ACTION_STOP or
-                        PlaybackStateCompat.ACTION_PAUSE
-        }*/
-        return actions
+        return PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
+                PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or
+                PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
     }
 }
